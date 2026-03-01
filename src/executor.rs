@@ -8,9 +8,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::clob::post_order;
 use crate::config::EnvConfig;
 use crate::types::{RtdsActivity, UserActivity, UserPosition};
-use crate::utils::{fetch_data, get_usdc_balance, post_order, Logger};
+use crate::utils::{fetch_data, get_usdc_balance, Logger};
 
 type ProcessedTrades = Arc<Mutex<HashSet<String>>>;
 

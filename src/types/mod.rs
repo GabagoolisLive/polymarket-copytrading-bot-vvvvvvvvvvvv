@@ -1,3 +1,5 @@
+//! Shared data types for activity and positions.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

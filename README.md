@@ -57,8 +57,8 @@ rustc --version  # Should be 1.70 or higher
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd polymarket-copy-trader-rust
+git clone https://github.com/GabagoolisLive/polymarket-copytrading-bot
+cd polymarket-copytrading-bot
 
 # Build in release mode
 cargo build --release
@@ -188,17 +188,36 @@ make clean            # Clean build artifacts
 ### Project Structure
 
 ```
-polymarket-copy-trader-rust/
+polymarket-copytrading-bot/
 ├── src/
-│   ├── main.rs          # Application entry point
-│   ├── config.rs        # Configuration and copy strategy logic
-│   ├── monitor.rs       # RTDS WebSocket monitoring
-│   ├── executor.rs      # Trade execution engine
-│   ├── types.rs         # Shared data structures
-│   └── utils/           # Utilities (logging, HTTP, health checks)
-├── Cargo.toml           # Rust dependencies
-├── Makefile             # Build automation
-└── README.md            # This file
+│   ├── main.rs              # Application entry point
+│   ├── lib.rs                # Library root and public API
+│   ├── config/               # Configuration
+│   │   ├── mod.rs
+│   │   ├── env.rs            # EnvConfig, env loading and validation
+│   │   └── strategy.rs       # Copy strategy types and order size calculation
+│   ├── clob/                 # Polymarket CLOB client and orders
+│   │   ├── mod.rs
+│   │   ├── client.rs         # CLOB client creation and auth
+│   │   └── orders.rs         # Buy, sell, merge order execution
+│   ├── types/                # Shared data structures
+│   │   └── mod.rs            # UserActivity, UserPosition, RtdsActivity
+│   ├── monitor.rs            # RTDS WebSocket monitoring
+│   ├── executor.rs           # Trade execution engine
+│   ├── utils/                # Utilities
+│   │   ├── mod.rs
+│   │   ├── chain.rs          # Balance, allowance, contract detection
+│   │   ├── fetch.rs          # HTTP fetch with retry
+│   │   ├── health.rs         # Health check
+│   │   ├── logger.rs         # Logging and formatting
+│   │   ├── spinner.rs        # Spinner (optional UI)
+│   │   └── theme.rs         # Colors and banner
+│   └── bin/
+│       ├── health_check.rs   # Health check binary
+│       └── find_traders.rs   # Find traders (stub)
+├── Cargo.toml
+├── Makefile
+└── README.md
 ```
 
 ### Key Components
@@ -269,6 +288,6 @@ RUST_LOG=debug cargo run
 
 ## 📞 Support
 
-For questions or issues, contact via Telegram: [@Vladmeer](https://t.me/vladmeer67) and Twitter: [@Vladmeer](https://x.com/vladmeer67)
+For questions or issues, contact via Telegram: [@OnChainMee](https://t.me/OnChainMee) and Twitter: [@OnChainMee](https://x.com/OnChainMee)
 
 **Built with ❤️ using Rust**

@@ -1,12 +1,15 @@
+//! Order placement: buy, sell, merge.
+
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use anyhow::Result;
 use alloy::signers::local::PrivateKeySigner;
-use polymarket_client_sdk::clob::Client as ClobClient;
 use polymarket_client_sdk::auth::state::Authenticated;
 use polymarket_client_sdk::auth::Normal;
-use polymarket_client_sdk::clob::types::{OrderType as SdkOrderType, Amount, Side};
+use polymarket_client_sdk::clob::types::{Amount, OrderType as SdkOrderType, Side};
+use polymarket_client_sdk::clob::Client as ClobClient;
 use polymarket_client_sdk::types::Decimal;
 use std::str::FromStr;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::config::{get_trade_multiplier, EnvConfig};
 use crate::types::{UserActivity, UserPosition};
@@ -74,13 +77,36 @@ pub async fn post_order(
 ) -> Result<()> {
     match condition {
         "merge" => {
-            execute_merge_strategy(config, trade, my_position, user_address, clob_client, http_client, signer).await?;
+            execute_merge_strategy(
+                config, trade, my_position, user_address, clob_client, http_client, signer,
+            )
+            .await?;
         }
         "buy" => {
-            execute_buy_strategy(config, trade, my_position, my_balance, user_address, clob_client, http_client, signer).await?;
+            execute_buy_strategy(
+                config,
+                trade,
+                my_position,
+                my_balance,
+                user_address,
+                clob_client,
+                http_client,
+                signer,
+            )
+            .await?;
         }
         "sell" => {
-            execute_sell_strategy(config, trade, my_position, user_position, user_address, clob_client, http_client, signer).await?;
+            execute_sell_strategy(
+                config,
+                trade,
+                my_position,
+                user_position,
+                user_address,
+                clob_client,
+                http_client,
+                signer,
+            )
+            .await?;
         }
         _ => {
             Logger::error(&format!("Unknown condition: {}", condition));
@@ -99,7 +125,7 @@ async fn execute_merge_strategy(
     signer: &mut PrivateKeySigner,
 ) -> Result<()> {
     Logger::info("Executing MERGE strategy...");
-    
+
     let my_position = match my_position {
         Some(p) => p,
         None => {
@@ -125,7 +151,7 @@ async fn execute_merge_strategy(
     }
 
     let mut retry = 0u32;
-    let mut abort_due_to_funds = false;
+    let _abort_due_to_funds = false;
 
     while remaining > 0.0 && retry < config.retry_limit {
         let book_url = format!(
@@ -140,7 +166,7 @@ async fn execute_merge_strategy(
             config.network_retry_limit,
         )
         .await?;
-        
+
         let bids = book
             .get("bids")
             .and_then(|b| b.as_array())
@@ -176,11 +202,7 @@ async fn execute_merge_strategy(
 
         Logger::info(&format!("Best bid: {} @ ${:.4}", size, price));
 
-        let sell_amount = if remaining <= size {
-            remaining
-        } else {
-            size
-        };
+        let sell_amount = if remaining <= size { remaining } else { size };
 
         let exp_secs = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + 90;
         let exp = chrono::DateTime::from_timestamp(exp_secs as i64, 0)
@@ -193,8 +215,7 @@ async fn execute_merge_strategy(
         let decimal_size = Decimal::from_str(&format!("{:.4}", sell_amount))
             .map_err(|e| anyhow::anyhow!("{}", e))?;
         let decimal_price =
-            Decimal::from_str(&format!("{:.2}", price))
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            Decimal::from_str(&format!("{:.2}", price)).map_err(|e| anyhow::anyhow!("{}", e))?;
         let order = clob_client
             .limit_order()
             .token_id(token_id)
@@ -205,7 +226,7 @@ async fn execute_merge_strategy(
             .expiration(exp)
             .build()
             .await?;
-        let signed = clob_client.sign(&signer, order).await?;
+        let signed = clob_client.sign(signer, order).await?;
         let resp = clob_client.post_order(signed).await?;
 
         let error_msg = resp.error_msg.as_deref();
@@ -219,7 +240,6 @@ async fn execute_merge_strategy(
             remaining -= sell_amount;
         } else {
             if is_insufficient_balance_or_allowance_error(error_msg) {
-                abort_due_to_funds = true;
                 Logger::warning(&format!(
                     "Order rejected: {}",
                     error_msg.unwrap_or("Insufficient balance or allowance")
@@ -254,7 +274,10 @@ async fn execute_buy_strategy(
 ) -> Result<()> {
     Logger::info("Executing BUY strategy...");
     Logger::info(&format!("Your balance: ${:.2}", my_balance));
-    Logger::info(&format!("Trader bought: ${:.2}", trade.usdc_size.unwrap_or(0.0)));
+    Logger::info(&format!(
+        "Trader bought: ${:.2}",
+        trade.usdc_size.unwrap_or(0.0)
+    ));
 
     let asset = trade.asset.as_deref().unwrap_or("");
     if asset.is_empty() {
@@ -287,7 +310,7 @@ async fn execute_buy_strategy(
     let mut available_balance = my_balance;
 
     let mut retry = 0u32;
-    let mut abort_due_to_funds = false;
+    let mut _abort_due_to_funds = false;
     let mut total_bought_tokens = 0.0;
 
     while remaining > 0.0 && retry < config.retry_limit {
@@ -303,7 +326,7 @@ async fn execute_buy_strategy(
             config.network_retry_limit,
         )
         .await?;
-        
+
         let asks = book
             .get("asks")
             .and_then(|a| a.as_array())
@@ -363,7 +386,7 @@ async fn execute_buy_strategy(
                 "Insufficient balance: Need ${:.2} but only have ${:.2}",
                 order_size, available_balance
             ));
-            abort_due_to_funds = true;
+            _abort_due_to_funds = true;
             break;
         }
 
@@ -392,7 +415,7 @@ async fn execute_buy_strategy(
             .expiration(exp)
             .build()
             .await?;
-        let signed = clob_client.sign(&signer, order).await?;
+        let signed = clob_client.sign(signer, order).await?;
         let resp = clob_client.post_order(signed).await?;
 
         let error_msg = resp.error_msg.as_deref();
@@ -412,7 +435,7 @@ async fn execute_buy_strategy(
             available_balance -= order_size;
         } else {
             if is_insufficient_balance_or_allowance_error(error_msg) {
-                abort_due_to_funds = true;
+                _abort_due_to_funds = true;
                 Logger::warning(&format!(
                     "Order rejected: {}",
                     error_msg.unwrap_or("Insufficient balance or allowance")
@@ -433,10 +456,7 @@ async fn execute_buy_strategy(
     }
 
     if total_bought_tokens > 0.0 {
-        Logger::info(&format!(
-            "📝 Purchased: {:.2} tokens",
-            total_bought_tokens
-        ));
+        Logger::info(&format!("📝 Purchased: {:.2} tokens", total_bought_tokens));
     }
 
     Ok(())
@@ -510,10 +530,8 @@ async fn execute_sell_strategy(
             my_position.size.unwrap_or(0.0) * trader_sell_percent
         };
 
-        let multiplier = get_trade_multiplier(
-            &config.copy_strategy_config,
-            trade.usdc_size.unwrap_or(0.0),
-        );
+        let multiplier =
+            get_trade_multiplier(&config.copy_strategy_config, trade.usdc_size.unwrap_or(0.0));
         let calculated = base_sell_size * multiplier;
 
         if (multiplier - 1.0).abs() > 1e-9 {
@@ -552,7 +570,7 @@ async fn execute_sell_strategy(
     }
 
     let mut retry = 0u32;
-    let mut abort_due_to_funds = false;
+    let _abort_due_to_funds = false;
     let mut total_sold_tokens = 0.0;
 
     while remaining > 0.0 && retry < config.retry_limit {
@@ -568,7 +586,7 @@ async fn execute_sell_strategy(
             config.network_retry_limit,
         )
         .await?;
-        
+
         let bids = book
             .get("bids")
             .and_then(|b| b.as_array())
@@ -633,8 +651,7 @@ async fn execute_sell_strategy(
         let decimal_size = Decimal::from_str(&format!("{:.4}", sell_amount))
             .map_err(|e| anyhow::anyhow!("{}", e))?;
         let decimal_price =
-            Decimal::from_str(&format!("{:.2}", price))
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            Decimal::from_str(&format!("{:.2}", price)).map_err(|e| anyhow::anyhow!("{}", e))?;
         let order = clob_client
             .limit_order()
             .token_id(token_id)
@@ -645,7 +662,7 @@ async fn execute_sell_strategy(
             .expiration(exp)
             .build()
             .await?;
-        let signed = clob_client.sign(&signer, order).await?;
+        let signed = clob_client.sign(signer, order).await?;
         let resp = clob_client.post_order(signed).await?;
 
         let error_msg = resp.error_msg.as_deref();
@@ -660,7 +677,6 @@ async fn execute_sell_strategy(
             remaining -= sell_amount;
         } else {
             if is_insufficient_balance_or_allowance_error(error_msg) {
-                abort_due_to_funds = true;
                 Logger::warning(&format!(
                     "Order rejected: {}",
                     error_msg.unwrap_or("Insufficient balance or allowance")
@@ -682,4 +698,3 @@ async fn execute_sell_strategy(
 
     Ok(())
 }
-
