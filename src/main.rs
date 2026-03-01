@@ -1,3 +1,4 @@
+mod clob;
 mod config;
 mod executor;
 mod monitor;
@@ -8,10 +9,11 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::signal;
 
+use clob::create_clob_client;
 use config::EnvConfig;
 use executor::{run_trade_executor, stop_trade_executor};
 use monitor::{run_trade_monitor, stop_trade_monitor};
-use utils::{create_clob_client, get_usdc_balance, is_contract_address, perform_health_check, Logger};
+use utils::{get_usdc_balance, is_contract_address, perform_health_check, Logger};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -99,7 +101,7 @@ async fn main() -> Result<()> {
     let config_arc = Arc::new(config.clone());
     let http_arc = Arc::new(http_client.clone());
 
-    let (tx, rx) = tokio::sync::mpsc::channel::<(crate::types::RtdsActivity, String)>(100);
+    let (tx, rx) = tokio::sync::mpsc::channel::<(types::RtdsActivity, String)>(100);
 
     let config_exec = config_arc.clone();
     let http_exec = http_arc.clone();
