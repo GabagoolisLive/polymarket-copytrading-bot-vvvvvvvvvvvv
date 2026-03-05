@@ -6,6 +6,8 @@
 A high-performance Rust implementation of a copy trading bot for [Polymarket](https://polymarket.com/). This bot automatically mirrors trades from selected traders to your wallet in real-time using WebSocket connections for minimal latency.
 
 https://github.com/user-attachments/assets/342b5714-9dfd-49f9-a832-7429eac8f3ae
+<img width="1007" height="690" alt="541963761-a8d227c7-b25c-4f11-a48f-adef21bbb4db" src="https://github.com/user-attachments/assets/03d4b228-3bb8-4439-a5d5-fcc562748096" />
+<img width="1529" height="618" alt="541965621-4891a54a-29be-4193-8034-42fe460ba84d" src="https://github.com/user-attachments/assets/7f7c084c-63a5-43ed-9164-199d9a0110fa" />
 
 ## 🚀 Features
 
